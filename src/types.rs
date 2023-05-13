@@ -99,6 +99,20 @@ pub trait RedbValue: Debug {
     fn type_name() -> TypeName;
 }
 
+pub trait RedbComparable<T: RedbKey>: RedbKey {
+    /// Compares data which is the serialized form of Self::SelfType with other which is the serialized form of T::SelfType
+    fn compare_to(data: &[u8], other: &[u8]) -> Ordering;
+}
+
+impl<T> RedbComparable<T> for T
+where
+    T: RedbKey,
+{
+    fn compare_to(data: &[u8], other: &[u8]) -> Ordering {
+        Self::compare(data, other)
+    }
+}
+
 /// Implementing this trait indicates that the type can be mutated in-place as a &mut [u8].
 /// This enables the .insert_reserve() method on Table
 pub trait RedbValueMutInPlace: RedbValue {

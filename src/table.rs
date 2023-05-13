@@ -3,7 +3,7 @@ use crate::tree_store::{
     AccessGuardMut, Btree, BtreeDrain, BtreeDrainFilter, BtreeMut, BtreeRangeIter, Checksum,
     PageHint, PageNumber, TransactionalMemory, MAX_VALUE_LENGTH,
 };
-use crate::types::{RedbKey, RedbValue, RedbValueMutInPlace};
+use crate::types::{RedbComparable, RedbKey, RedbValue, RedbValueMutInPlace};
 use crate::{AccessGuard, WriteTransaction};
 use crate::{Error, Result};
 use std::borrow::Borrow;
@@ -163,9 +163,12 @@ impl<'db, 'txn, K: RedbKey + 'static, V: RedbValueMutInPlace + 'static> Table<'d
 impl<'db, 'txn, K: RedbKey + 'static, V: RedbValue + 'static> ReadableTable<K, V>
     for Table<'db, 'txn, K, V>
 {
-    fn get<'a>(&self, key: impl Borrow<K::SelfType<'a>>) -> Result<Option<AccessGuard<V>>>
+    fn get<'a, Q: RedbComparable<K>>(
+        &self,
+        key: impl Borrow<Q::SelfType<'a>>,
+    ) -> Result<Option<AccessGuard<V>>>
     where
-        K: 'a,
+        Q: 'a,
     {
         self.tree.get(key.borrow())
     }
@@ -197,9 +200,12 @@ impl<'db, 'txn, K: RedbKey + 'static, V: RedbValue + 'static> Drop for Table<'db
 
 pub trait ReadableTable<K: RedbKey + 'static, V: RedbValue + 'static>: Sealed {
     /// Returns the value corresponding to the given key
-    fn get<'a>(&self, key: impl Borrow<K::SelfType<'a>>) -> Result<Option<AccessGuard<V>>>
+    fn get<'a, Q: RedbComparable<K>>(
+        &self,
+        key: impl Borrow<Q::SelfType<'a>>,
+    ) -> Result<Option<AccessGuard<V>>>
     where
-        K: 'a;
+        Q: 'a;
 
     /// Returns a double-ended iterator over a range of elements in the table
     ///
@@ -270,9 +276,12 @@ impl<'txn, K: RedbKey + 'static, V: RedbValue + 'static> ReadOnlyTable<'txn, K, 
 impl<'txn, K: RedbKey + 'static, V: RedbValue + 'static> ReadableTable<K, V>
     for ReadOnlyTable<'txn, K, V>
 {
-    fn get<'a>(&self, key: impl Borrow<K::SelfType<'a>>) -> Result<Option<AccessGuard<V>>>
+    fn get<'a, Q: RedbComparable<K>>(
+        &self,
+        key: impl Borrow<Q::SelfType<'a>>,
+    ) -> Result<Option<AccessGuard<V>>>
     where
-        K: 'a,
+        Q: 'a,
     {
         self.tree.get(key.borrow())
     }

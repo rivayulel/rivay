@@ -6,7 +6,7 @@ use crate::tree_store::btree_iters::BtreeDrain;
 use crate::tree_store::btree_mutator::MutateHelper;
 use crate::tree_store::page_store::{Page, PageImpl, TransactionalMemory};
 use crate::tree_store::{AccessGuardMut, BtreeDrainFilter, BtreeRangeIter, PageHint, PageNumber};
-use crate::types::{RedbKey, RedbValue, RedbValueMutInPlace};
+use crate::types::{RedbComparable, RedbKey, RedbValue, RedbValueMutInPlace};
 use crate::{AccessGuard, Result};
 #[cfg(feature = "logging")]
 use log::trace;
@@ -218,7 +218,10 @@ impl<'a, K: RedbKey + 'a, V: RedbValue + 'a> BtreeMut<'a, K, V> {
         Btree::new(self.get_root(), PageHint::None, self.mem)
     }
 
-    pub(crate) fn get(&self, key: &K::SelfType<'_>) -> Result<Option<AccessGuard<'_, V>>> {
+    pub(crate) fn get<Q: RedbComparable<K>>(
+        &self,
+        key: &Q::SelfType<'_>,
+    ) -> Result<Option<AccessGuard<'_, V>>> {
         self.read_tree()?.get(key)
     }
 
@@ -435,9 +438,12 @@ impl<'a, K: RedbKey, V: RedbValue> Btree<'a, K, V> {
         })
     }
 
-    pub(crate) fn get(&self, key: &K::SelfType<'_>) -> Result<Option<AccessGuard<'a, V>>> {
+    pub(crate) fn get<Q: RedbComparable<K>>(
+        &self,
+        key: &Q::SelfType<'_>,
+    ) -> Result<Option<AccessGuard<'a, V>>> {
         if let Some(ref root_page) = self.cached_root {
-            self.get_helper(root_page.clone(), K::as_bytes(key).as_ref())
+            self.get_helper(root_page.clone(), Q::as_bytes(key).as_ref())
         } else {
             Ok(None)
         }
